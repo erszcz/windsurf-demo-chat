@@ -11,25 +11,33 @@ init(Req0, State) ->
         <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
         <title>Windsurf Demo Chat</title>
         <style>
+            :root {
+                --color-primary: #10b981;
+                --color-primary-dark: #059669;
+                --color-primary-light: #d1fae5;
+                --color-gray: #374151;
+                --color-gray-light: #f3f4f6;
+            }
+            
             body {
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
                 margin: 0;
-                padding: 20px;
-                background: #f5f7fa;
-                color: #2d3748;
+                padding: 10px;
+                background: var(--color-gray-light);
+                color: var(--color-gray);
                 height: 100vh;
                 display: flex;
                 flex-direction: column;
             }
 
             .container {
-                max-width: 800px;
+                max-width: 600px;
                 margin: 0 auto;
                 width: 100%;
                 background: white;
-                border-radius: 12px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                padding: 12px;
                 flex-grow: 1;
                 display: flex;
                 flex-direction: column;
@@ -37,30 +45,30 @@ init(Req0, State) ->
 
             h1 {
                 text-align: center;
-                color: #2b6cb0;
-                margin-bottom: 1.5rem;
+                color: var(--color-primary-dark);
+                margin: 0.5rem 0;
+                font-size: 1.5rem;
                 font-weight: 600;
             }
 
             #username-container {
                 display: flex;
-                flex-direction: column;
                 align-items: center;
-                gap: 1rem;
-                padding: 2rem;
-                background: #ebf4ff;
-                border-radius: 8px;
-                margin-bottom: 1rem;
+                gap: 0.5rem;
+                padding: 0.75rem;
+                background: var(--color-primary-light);
+                border-radius: 6px;
+                margin-bottom: 0.75rem;
             }
 
             #messages {
                 flex-grow: 1;
                 overflow-y: auto;
-                padding: 1rem;
-                margin-bottom: 1rem;
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                background: #f8fafc;
+                padding: 0.5rem;
+                margin-bottom: 0.75rem;
+                border: 1px solid #e5e7eb;
+                border-radius: 6px;
+                background: #ffffff;
             }
 
             #input-container {
@@ -71,90 +79,91 @@ init(Req0, State) ->
 
             input[type='text'] {
                 flex-grow: 1;
-                padding: 0.75rem 1rem;
-                border: 2px solid #e2e8f0;
-                border-radius: 6px;
-                font-size: 1rem;
+                padding: 0.5rem 0.75rem;
+                border: 1.5px solid #e5e7eb;
+                border-radius: 4px;
+                font-size: 0.875rem;
                 transition: border-color 0.2s;
             }
 
             input[type='text']:focus {
                 outline: none;
-                border-color: #4299e1;
-                box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+                border-color: var(--color-primary);
+                box-shadow: 0 0 0 2px var(--color-primary-light);
             }
 
             button {
-                padding: 0.75rem 1.5rem;
-                background: #4299e1;
+                padding: 0.5rem 1rem;
+                background: var(--color-primary);
                 color: white;
                 border: none;
-                border-radius: 6px;
-                font-weight: 600;
+                border-radius: 4px;
+                font-weight: 500;
+                font-size: 0.875rem;
                 cursor: pointer;
                 transition: background-color 0.2s;
             }
 
             button:hover {
-                background: #3182ce;
-            }
-
-            button:active {
-                background: #2b6cb0;
+                background: var(--color-primary-dark);
             }
 
             .message {
-                margin: 0.5rem 0;
-                padding: 0.75rem 1rem;
-                border-radius: 8px;
-                max-width: 80%;
+                margin: 0.25rem 0;
+                padding: 0.5rem 0.75rem;
+                border-radius: 6px;
+                max-width: 85%;
                 word-wrap: break-word;
+                font-size: 0.875rem;
             }
 
             .message.system {
-                background: #e2e8f0;
-                color: #4a5568;
+                background: #f3f4f6;
+                color: #6b7280;
                 text-align: center;
                 max-width: 100%;
                 font-style: italic;
+                font-size: 0.75rem;
+                padding: 0.25rem 0.5rem;
+                margin: 0.25rem 0;
             }
 
             .message.self {
-                background: #4299e1;
+                background: var(--color-primary);
                 color: white;
                 margin-left: auto;
                 border-bottom-right-radius: 2px;
             }
 
             .message.other {
-                background: #edf2f7;
-                color: #2d3748;
+                background: var(--color-gray-light);
+                color: var(--color-gray);
                 margin-right: auto;
                 border-bottom-left-radius: 2px;
             }
 
             .username {
-                font-size: 0.875rem;
-                margin-bottom: 0.25rem;
+                font-size: 0.75rem;
+                margin-bottom: 0.125rem;
                 font-weight: 600;
             }
 
             .message.self .username {
-                color: #e2e8f0;
+                color: rgba(255, 255, 255, 0.9);
             }
 
             .message.other .username {
-                color: #4a5568;
+                color: var(--color-primary-dark);
             }
 
             @media (max-width: 640px) {
                 body {
-                    padding: 10px;
+                    padding: 8px;
                 }
 
                 .container {
-                    border-radius: 8px;
-                    padding: 15px;
+                    border-radius: 6px;
+                    padding: 8px;
                 }
 
                 .message {
