@@ -23,7 +23,10 @@ init() ->
         {pool_sup_period, 1},
         {worker_module, windsurf_demo_db_worker}
     ],
-    {ok, _} = wpool:start_pool(?POOL_NAME, PoolConfig),
+    case wpool:start_pool(?POOL_NAME, PoolConfig) of
+        {ok, _} -> ok;
+        {error, {already_started, _}} -> ok
+    end,
 
     % Initialize database schema
     CreateTable = "CREATE TABLE IF NOT EXISTS messages (
@@ -33,15 +36,16 @@ init() ->
         timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     )",
     CreateIndex = "CREATE INDEX IF NOT EXISTS messages_timestamp_idx ON messages (timestamp DESC)",
-
-    ok = wpool:call(?POOL_NAME, {squery, CreateTable}, best_worker),
-    ok = wpool:call(?POOL_NAME, {squery, CreateIndex}, best_worker),
+    
+    % Execute schema creation queries
+    {ok, [], []} = wpool:call(?POOL_NAME, {squery, CreateTable}, best_worker),
+    {ok, [], []} = wpool:call(?POOL_NAME, {squery, CreateIndex}, best_worker),
     ok.
 
 store_message(Username, Message) ->
     Query = "INSERT INTO messages (username, message) VALUES ($1, $2)",
     case wpool:call(?POOL_NAME, {equery, Query, [Username, Message]}, best_worker) of
-        {ok, 1} -> ok;
+        {ok, _Count} -> ok;
         Error -> Error
     end.
 

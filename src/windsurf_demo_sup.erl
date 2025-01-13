@@ -8,7 +8,6 @@ start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 init([]) ->
-    ok = windsurf_demo_db:init(),
     SupFlags = #{strategy => one_for_one,
                  intensity => 5,
                  period => 10},
