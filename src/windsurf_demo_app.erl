@@ -14,7 +14,8 @@ start(_StartType, _StartArgs) ->
             {"/websocket", windsurf_demo_ws_handler, []}
         ]}
     ]),
-    {ok, _} = cowboy:start_clear(http,
+    {ok, _} = cowboy:start_clear(
+        http,
         [{port, 8080}],
         #{env => #{dispatch => Dispatch}}
     ),

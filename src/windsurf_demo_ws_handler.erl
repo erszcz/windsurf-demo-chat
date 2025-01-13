@@ -9,15 +9,16 @@
 init(Req, _State) ->
     QS = maps:from_list(cowboy_req:parse_qs(Req)),
     logger:info("Query string: ~p", [QS]),
-    Username = case QS of
-        #{<<"username">> := Name} ->
-            logger:info("Using provided username: ~p", [Name]),
-            Name;
-        _ ->
-            Generated = generate_username(),
-            logger:info("Using generated username: ~p", [Generated]),
-            Generated
-    end,
+    Username =
+        case QS of
+            #{<<"username">> := Name} ->
+                logger:info("Using provided username: ~p", [Name]),
+                Name;
+            _ ->
+                Generated = generate_username(),
+                logger:info("Using generated username: ~p", [Generated]),
+                Generated
+        end,
     % Set idle timeout to 1 hour and increase max frame size
     {cowboy_websocket, Req, #{username => Username}, #{
         idle_timeout => 3_600_000,

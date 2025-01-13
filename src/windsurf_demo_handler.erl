@@ -4,274 +4,278 @@
 -export([init/2]).
 
 init(Req0, State) ->
-    Html = <<"<!DOCTYPE html>
-<html>
-    <head>
-        <meta charset=\"UTF-8\">
-        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
-        <title>Windsurf Demo Chat</title>
-        <style>
-            :root {
-                --color-primary: #10b981;
-                --color-primary-dark: #059669;
-                --color-primary-light: #d1fae5;
-                --color-gray: #374151;
-                --color-gray-light: #f3f4f6;
-            }
-            
-            body {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-                margin: 0;
-                padding: 10px;
-                background: var(--color-gray-light);
-                color: var(--color-gray);
-                height: 100vh;
-                display: flex;
-                flex-direction: column;
-            }
-
-            .container {
-                max-width: 600px;
-                margin: 0 auto;
-                width: 100%;
-                background: white;
-                border-radius: 8px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                padding: 12px;
-                flex-grow: 1;
-                display: flex;
-                flex-direction: column;
-            }
-
-            h1 {
-                text-align: center;
-                color: var(--color-primary-dark);
-                margin: 0.5rem 0;
-                font-size: 1.5rem;
-                font-weight: 600;
-            }
-
-            #username-container {
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                padding: 0.75rem;
-                background: var(--color-primary-light);
-                border-radius: 6px;
-                margin-bottom: 0.75rem;
-            }
-
-            #messages {
-                flex-grow: 1;
-                overflow-y: auto;
-                padding: 0.5rem;
-                margin-bottom: 0.75rem;
-                border: 1px solid #e5e7eb;
-                border-radius: 6px;
-                background: #ffffff;
-            }
-
-            #input-container {
-                display: none;
-                gap: 0.5rem;
-                margin-top: auto;
-            }
-
-            input[type='text'] {
-                flex-grow: 1;
-                padding: 0.5rem 0.75rem;
-                border: 1.5px solid #e5e7eb;
-                border-radius: 4px;
-                font-size: 0.875rem;
-                transition: border-color 0.2s;
-            }
-
-            input[type='text']:focus {
-                outline: none;
-                border-color: var(--color-primary);
-                box-shadow: 0 0 0 2px var(--color-primary-light);
-            }
-
-            button {
-                padding: 0.5rem 1rem;
-                background: var(--color-primary);
-                color: white;
-                border: none;
-                border-radius: 4px;
-                font-weight: 500;
-                font-size: 0.875rem;
-                cursor: pointer;
-                transition: background-color 0.2s;
-            }
-
-            button:hover {
-                background: var(--color-primary-dark);
-            }
-
-            .message {
-                margin: 0.25rem 0;
-                padding: 0.5rem 0.75rem;
-                border-radius: 6px;
-                max-width: 85%;
-                word-wrap: break-word;
-                font-size: 0.875rem;
-            }
-
-            .message.system {
-                background: #f3f4f6;
-                color: #6b7280;
-                text-align: center;
-                max-width: 100%;
-                font-style: italic;
-                font-size: 0.75rem;
-                padding: 0.25rem 0.5rem;
-                margin: 0.25rem 0;
-            }
-
-            .message.self {
-                background: var(--color-primary);
-                color: white;
-                margin-left: auto;
-                border-bottom-right-radius: 2px;
-            }
-
-            .message.other {
-                background: var(--color-gray-light);
-                color: var(--color-gray);
-                margin-right: auto;
-                border-bottom-left-radius: 2px;
-            }
-
-            .username {
-                font-size: 0.75rem;
-                margin-bottom: 0.125rem;
-                font-weight: 600;
-            }
-
-            .message.self .username {
-                color: rgba(255, 255, 255, 0.9);
-            }
-
-            .message.other .username {
-                color: var(--color-primary-dark);
-            }
-
-            @media (max-width: 640px) {
-                body {
-                    padding: 8px;
-                }
-
-                .container {
-                    border-radius: 6px;
-                    padding: 8px;
-                }
-
-                .message {
-                    max-width: 90%;
-                }
-            }
-        </style>
-    </head>
-    <body>
-        <div class=\"container\">
-            <h1>Windsurf Chat</h1>
-            <div id=\"username-container\">
-                <input type=\"text\" id=\"username-input\" placeholder=\"Enter your username\" autofocus>
-                <button onclick=\"setUsername()\">Join Chat</button>
-            </div>
-            <div id=\"messages\"></div>
-            <div id=\"input-container\">
-                <input type=\"text\" id=\"message-input\" placeholder=\"Type your message...\" onkeypress=\"if(event.key === 'Enter') sendMessage()\">
-                <button onclick=\"sendMessage()\">Send</button>
-            </div>
-        </div>
-        <script>
-            let ws = null;
-            let username = '';
-            
-            function setUsername() {
-                const input = document.getElementById('username-input');
-                const inputUsername = input.value.trim();
-                if (inputUsername) {
-                    username = inputUsername;
-                    document.getElementById('username-container').style.display = 'none';
-                    document.getElementById('input-container').style.display = 'flex';
-                    connectWebSocket(username);
-                } else {
-                    alert('Please enter a username');
-                }
-            }
-            
-            function connectWebSocket(username) {
-                const wsUrl = new URL('/websocket', window.location.href);
-                wsUrl.protocol = wsUrl.protocol.replace('http', 'ws');
-                wsUrl.searchParams.append('username', username);
-                console.log('Connecting with URL:', wsUrl.href);
-                ws = new WebSocket(wsUrl.href);
-                
-                ws.onopen = function() {
-                    console.log('Connected to WebSocket with username:', username);
-                    addSystemMessage('Connected to chat as: ' + username);
-                };
-                
-                ws.onclose = function() {
-                    console.log('Disconnected from WebSocket');
-                    addSystemMessage('Disconnected from chat');
-                };
-                
-                ws.onmessage = function(event) {
-                    const data = JSON.parse(event.data);
-                    addMessage(data.message, data.username, username === data.username);
-                };
-            }
-            
-            function sendMessage() {
-                const input = document.getElementById('message-input');
-                const message = input.value.trim();
-                if (message && ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(message);
-                    input.value = '';
-                }
-            }
-            
-            function addMessage(message, msgUsername, isSelf) {
-                const messagesDiv = document.getElementById('messages');
-                const messageDiv = document.createElement('div');
-                messageDiv.className = `message ${isSelf ? 'self' : 'other'}`;
-                
-                const usernameDiv = document.createElement('div');
-                usernameDiv.className = 'username';
-                usernameDiv.textContent = msgUsername;
-                
-                const messageContent = document.createElement('div');
-                messageContent.className = 'message-content';
-                messageContent.textContent = message;
-                
-                messageDiv.appendChild(usernameDiv);
-                messageDiv.appendChild(messageContent);
-                messagesDiv.appendChild(messageDiv);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            }
-            
-            function addSystemMessage(message) {
-                const messagesDiv = document.getElementById('messages');
-                const messageDiv = document.createElement('div');
-                messageDiv.className = 'message system';
-                messageDiv.textContent = message;
-                messagesDiv.appendChild(messageDiv);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            }
-
-            document.getElementById('username-input').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    setUsername();
-                }
-            });
-        </script>
-    </body>
-</html>">>,
-    {ok, cowboy_req:reply(200,
-        #{<<"content-type">> => <<"text/html">>},
-        Html,
-        Req0),
-    State}.
+    Html =
+        <<"<!DOCTYPE html>\n"
+        "<html>\n"
+        "    <head>\n"
+        "        <meta charset=\"UTF-8\">\n"
+        "        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+        "        <title>Windsurf Demo Chat</title>\n"
+        "        <style>\n"
+        "            :root {\n"
+        "                --color-primary: #10b981;\n"
+        "                --color-primary-dark: #059669;\n"
+        "                --color-primary-light: #d1fae5;\n"
+        "                --color-gray: #374151;\n"
+        "                --color-gray-light: #f3f4f6;\n"
+        "            }\n"
+        "            \n"
+        "            body {\n"
+        "                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;\n"
+        "                margin: 0;\n"
+        "                padding: 10px;\n"
+        "                background: var(--color-gray-light);\n"
+        "                color: var(--color-gray);\n"
+        "                height: 100vh;\n"
+        "                display: flex;\n"
+        "                flex-direction: column;\n"
+        "            }\n"
+        "\n"
+        "            .container {\n"
+        "                max-width: 600px;\n"
+        "                margin: 0 auto;\n"
+        "                width: 100%;\n"
+        "                background: white;\n"
+        "                border-radius: 8px;\n"
+        "                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);\n"
+        "                padding: 12px;\n"
+        "                flex-grow: 1;\n"
+        "                display: flex;\n"
+        "                flex-direction: column;\n"
+        "            }\n"
+        "\n"
+        "            h1 {\n"
+        "                text-align: center;\n"
+        "                color: var(--color-primary-dark);\n"
+        "                margin: 0.5rem 0;\n"
+        "                font-size: 1.5rem;\n"
+        "                font-weight: 600;\n"
+        "            }\n"
+        "\n"
+        "            #username-container {\n"
+        "                display: flex;\n"
+        "                align-items: center;\n"
+        "                gap: 0.5rem;\n"
+        "                padding: 0.75rem;\n"
+        "                background: var(--color-primary-light);\n"
+        "                border-radius: 6px;\n"
+        "                margin-bottom: 0.75rem;\n"
+        "            }\n"
+        "\n"
+        "            #messages {\n"
+        "                flex-grow: 1;\n"
+        "                overflow-y: auto;\n"
+        "                padding: 0.5rem;\n"
+        "                margin-bottom: 0.75rem;\n"
+        "                border: 1px solid #e5e7eb;\n"
+        "                border-radius: 6px;\n"
+        "                background: #ffffff;\n"
+        "            }\n"
+        "\n"
+        "            #input-container {\n"
+        "                display: none;\n"
+        "                gap: 0.5rem;\n"
+        "                margin-top: auto;\n"
+        "            }\n"
+        "\n"
+        "            input[type='text'] {\n"
+        "                flex-grow: 1;\n"
+        "                padding: 0.5rem 0.75rem;\n"
+        "                border: 1.5px solid #e5e7eb;\n"
+        "                border-radius: 4px;\n"
+        "                font-size: 0.875rem;\n"
+        "                transition: border-color 0.2s;\n"
+        "            }\n"
+        "\n"
+        "            input[type='text']:focus {\n"
+        "                outline: none;\n"
+        "                border-color: var(--color-primary);\n"
+        "                box-shadow: 0 0 0 2px var(--color-primary-light);\n"
+        "            }\n"
+        "\n"
+        "            button {\n"
+        "                padding: 0.5rem 1rem;\n"
+        "                background: var(--color-primary);\n"
+        "                color: white;\n"
+        "                border: none;\n"
+        "                border-radius: 4px;\n"
+        "                font-weight: 500;\n"
+        "                font-size: 0.875rem;\n"
+        "                cursor: pointer;\n"
+        "                transition: background-color 0.2s;\n"
+        "            }\n"
+        "\n"
+        "            button:hover {\n"
+        "                background: var(--color-primary-dark);\n"
+        "            }\n"
+        "\n"
+        "            .message {\n"
+        "                margin: 0.25rem 0;\n"
+        "                padding: 0.5rem 0.75rem;\n"
+        "                border-radius: 6px;\n"
+        "                max-width: 85%;\n"
+        "                word-wrap: break-word;\n"
+        "                font-size: 0.875rem;\n"
+        "            }\n"
+        "\n"
+        "            .message.system {\n"
+        "                background: #f3f4f6;\n"
+        "                color: #6b7280;\n"
+        "                text-align: center;\n"
+        "                max-width: 100%;\n"
+        "                font-style: italic;\n"
+        "                font-size: 0.75rem;\n"
+        "                padding: 0.25rem 0.5rem;\n"
+        "                margin: 0.25rem 0;\n"
+        "            }\n"
+        "\n"
+        "            .message.self {\n"
+        "                background: var(--color-primary);\n"
+        "                color: white;\n"
+        "                margin-left: auto;\n"
+        "                border-bottom-right-radius: 2px;\n"
+        "            }\n"
+        "\n"
+        "            .message.other {\n"
+        "                background: var(--color-gray-light);\n"
+        "                color: var(--color-gray);\n"
+        "                margin-right: auto;\n"
+        "                border-bottom-left-radius: 2px;\n"
+        "            }\n"
+        "\n"
+        "            .username {\n"
+        "                font-size: 0.75rem;\n"
+        "                margin-bottom: 0.125rem;\n"
+        "                font-weight: 600;\n"
+        "            }\n"
+        "\n"
+        "            .message.self .username {\n"
+        "                color: rgba(255, 255, 255, 0.9);\n"
+        "            }\n"
+        "\n"
+        "            .message.other .username {\n"
+        "                color: var(--color-primary-dark);\n"
+        "            }\n"
+        "\n"
+        "            @media (max-width: 640px) {\n"
+        "                body {\n"
+        "                    padding: 8px;\n"
+        "                }\n"
+        "\n"
+        "                .container {\n"
+        "                    border-radius: 6px;\n"
+        "                    padding: 8px;\n"
+        "                }\n"
+        "\n"
+        "                .message {\n"
+        "                    max-width: 90%;\n"
+        "                }\n"
+        "            }\n"
+        "        </style>\n"
+        "    </head>\n"
+        "    <body>\n"
+        "        <div class=\"container\">\n"
+        "            <h1>Windsurf Chat</h1>\n"
+        "            <div id=\"username-container\">\n"
+        "                <input type=\"text\" id=\"username-input\" placeholder=\"Enter your username\" autofocus>\n"
+        "                <button onclick=\"setUsername()\">Join Chat</button>\n"
+        "            </div>\n"
+        "            <div id=\"messages\"></div>\n"
+        "            <div id=\"input-container\">\n"
+        "                <input type=\"text\" id=\"message-input\" placeholder=\"Type your message...\" onkeypress=\"if(event.key === 'Enter') sendMessage()\">\n"
+        "                <button onclick=\"sendMessage()\">Send</button>\n"
+        "            </div>\n"
+        "        </div>\n"
+        "        <script>\n"
+        "            let ws = null;\n"
+        "            let username = '';\n"
+        "            \n"
+        "            function setUsername() {\n"
+        "                const input = document.getElementById('username-input');\n"
+        "                const inputUsername = input.value.trim();\n"
+        "                if (inputUsername) {\n"
+        "                    username = inputUsername;\n"
+        "                    document.getElementById('username-container').style.display = 'none';\n"
+        "                    document.getElementById('input-container').style.display = 'flex';\n"
+        "                    connectWebSocket(username);\n"
+        "                } else {\n"
+        "                    alert('Please enter a username');\n"
+        "                }\n"
+        "            }\n"
+        "            \n"
+        "            function connectWebSocket(username) {\n"
+        "                const wsUrl = new URL('/websocket', window.location.href);\n"
+        "                wsUrl.protocol = wsUrl.protocol.replace('http', 'ws');\n"
+        "                wsUrl.searchParams.append('username', username);\n"
+        "                console.log('Connecting with URL:', wsUrl.href);\n"
+        "                ws = new WebSocket(wsUrl.href);\n"
+        "                \n"
+        "                ws.onopen = function() {\n"
+        "                    console.log('Connected to WebSocket with username:', username);\n"
+        "                    addSystemMessage('Connected to chat as: ' + username);\n"
+        "                };\n"
+        "                \n"
+        "                ws.onclose = function() {\n"
+        "                    console.log('Disconnected from WebSocket');\n"
+        "                    addSystemMessage('Disconnected from chat');\n"
+        "                };\n"
+        "                \n"
+        "                ws.onmessage = function(event) {\n"
+        "                    const data = JSON.parse(event.data);\n"
+        "                    addMessage(data.message, data.username, username === data.username);\n"
+        "                };\n"
+        "            }\n"
+        "            \n"
+        "            function sendMessage() {\n"
+        "                const input = document.getElementById('message-input');\n"
+        "                const message = input.value.trim();\n"
+        "                if (message && ws && ws.readyState === WebSocket.OPEN) {\n"
+        "                    ws.send(message);\n"
+        "                    input.value = '';\n"
+        "                }\n"
+        "            }\n"
+        "            \n"
+        "            function addMessage(message, msgUsername, isSelf) {\n"
+        "                const messagesDiv = document.getElementById('messages');\n"
+        "                const messageDiv = document.createElement('div');\n"
+        "                messageDiv.className = `message ${isSelf ? 'self' : 'other'}`;\n"
+        "                \n"
+        "                const usernameDiv = document.createElement('div');\n"
+        "                usernameDiv.className = 'username';\n"
+        "                usernameDiv.textContent = msgUsername;\n"
+        "                \n"
+        "                const messageContent = document.createElement('div');\n"
+        "                messageContent.className = 'message-content';\n"
+        "                messageContent.textContent = message;\n"
+        "                \n"
+        "                messageDiv.appendChild(usernameDiv);\n"
+        "                messageDiv.appendChild(messageContent);\n"
+        "                messagesDiv.appendChild(messageDiv);\n"
+        "                messagesDiv.scrollTop = messagesDiv.scrollHeight;\n"
+        "            }\n"
+        "            \n"
+        "            function addSystemMessage(message) {\n"
+        "                const messagesDiv = document.getElementById('messages');\n"
+        "                const messageDiv = document.createElement('div');\n"
+        "                messageDiv.className = 'message system';\n"
+        "                messageDiv.textContent = message;\n"
+        "                messagesDiv.appendChild(messageDiv);\n"
+        "                messagesDiv.scrollTop = messagesDiv.scrollHeight;\n"
+        "            }\n"
+        "\n"
+        "            document.getElementById('username-input').addEventListener('keypress', function(e) {\n"
+        "                if (e.key === 'Enter') {\n"
+        "                    setUsername();\n"
+        "                }\n"
+        "            });\n"
+        "        </script>\n"
+        "    </body>\n"
+        "</html>">>,
+    {ok,
+        cowboy_req:reply(
+            200,
+            #{<<"content-type">> => <<"text/html">>},
+            Html,
+            Req0
+        ),
+        State}.

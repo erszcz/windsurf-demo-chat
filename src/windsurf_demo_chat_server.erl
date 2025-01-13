@@ -2,24 +2,29 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0,
-         add_client/2,
-         remove_client/1,
-         broadcast_message/2,
-         get_recent_messages/0]).
+-export([
+    start_link/0,
+    add_client/2,
+    remove_client/1,
+    broadcast_message/2,
+    get_recent_messages/0
+]).
 
 %% gen_server callbacks
--export([init/1,
-         handle_call/3,
-         handle_cast/2,
-         handle_info/2,
-         terminate/2,
-         code_change/3]).
+-export([
+    init/1,
+    handle_call/3,
+    handle_cast/2,
+    handle_info/2,
+    terminate/2,
+    code_change/3
+]).
 
 -define(RECENT_MESSAGES_LIMIT, 50).
 
 -record(state, {
-    clients = #{} :: map()  % Map of Pid -> Username
+    % Map of Pid -> Username
+    clients = #{} :: map()
 }).
 
 %% API
@@ -62,10 +67,8 @@ handle_call(_Request, _From, State) ->
 handle_cast({add_client, Pid, Username}, State) ->
     logger:info("Storing client ~p with username: ~p", [Pid, Username]),
     {noreply, State#state{clients = maps:put(Pid, Username, State#state.clients)}};
-
 handle_cast({remove_client, Pid}, State) ->
     {noreply, State#state{clients = maps:remove(Pid, State#state.clients)}};
-
 handle_cast({broadcast, FromPid, Message}, State) ->
     Username = maps:get(FromPid, State#state.clients, <<"Anonymous">>),
     logger:info("Broadcasting message from ~p (~p): ~p", [Username, FromPid, Message]),
@@ -82,7 +85,6 @@ handle_cast({broadcast, FromPid, Message}, State) ->
         State#state.clients
     ),
     {noreply, State};
-
 handle_cast(_Msg, State) ->
     {noreply, State}.
 

@@ -6,12 +6,14 @@
 -export([squery/2, equery/3]).
 
 %% gen_server callbacks
--export([init/1,
-         handle_call/3,
-         handle_cast/2,
-         handle_info/2,
-         terminate/2,
-         code_change/3]).
+-export([
+    init/1,
+    handle_call/3,
+    handle_cast/2,
+    handle_info/2,
+    terminate/2,
+    code_change/3
+]).
 
 -record(state, {conn}).
 
@@ -33,14 +35,16 @@ init(_Args) ->
     DB = application:get_env(windsurf_demo, db_name, "windsurf_chat"),
     User = application:get_env(windsurf_demo, db_user, "windsurf"),
     Password = application:get_env(windsurf_demo, db_password, "windsurf"),
-    
-    case epgsql:connect(#{
-        host => Host,
-        port => Port,
-        database => DB,
-        username => User,
-        password => Password
-    }) of
+
+    case
+        epgsql:connect(#{
+            host => Host,
+            port => Port,
+            database => DB,
+            username => User,
+            password => Password
+        })
+    of
         {ok, Conn} ->
             {ok, #state{conn = Conn}};
         {error, Reason} ->
