@@ -203,7 +203,7 @@ init(Req0, State) ->
             }
             
             function connectWebSocket(username) {
-                const wsUrl = new URL('/ws', window.location.href);
+                const wsUrl = new URL('/websocket', window.location.href);
                 wsUrl.protocol = wsUrl.protocol.replace('http', 'ws');
                 wsUrl.searchParams.append('username', username);
                 console.log('Connecting with URL:', wsUrl.href);
