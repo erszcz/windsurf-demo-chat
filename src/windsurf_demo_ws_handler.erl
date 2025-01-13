@@ -8,14 +8,14 @@
 
 init(Req, _State) ->
     QS = maps:from_list(cowboy_req:parse_qs(Req)),
-    io:format("Query string: ~p~n", [QS]),
+    logger:info("Query string: ~p", [QS]),
     Username = case QS of
         #{<<"username">> := Name} ->
-            io:format("Using provided username: ~p~n", [Name]),
+            logger:info("Using provided username: ~p", [Name]),
             Name;
         _ ->
             Generated = generate_username(),
-            io:format("Using generated username: ~p~n", [Generated]),
+            logger:info("Using generated username: ~p", [Generated]),
             Generated
     end,
     % Set idle timeout to 1 hour and increase max frame size
@@ -25,7 +25,7 @@ init(Req, _State) ->
     }}.
 
 websocket_init(State = #{username := Username}) ->
-    io:format("Initializing websocket with username: ~p~n", [Username]),
+    logger:info("Initializing websocket with username: ~p", [Username]),
     windsurf_demo_chat_server:add_client(self(), Username),
     {ok, State}.
 

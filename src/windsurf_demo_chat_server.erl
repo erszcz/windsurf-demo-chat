@@ -27,7 +27,7 @@ start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 add_client(Pid, Username) ->
-    io:format("Adding client ~p with username: ~p~n", [Pid, Username]),
+    logger:info("Adding client ~p with username: ~p", [Pid, Username]),
     gen_server:cast(?MODULE, {add_client, Pid, Username}),
     % Send recent messages to the new client
     Recent = get_recent_messages(),
@@ -43,6 +43,7 @@ add_client(Pid, Username) ->
     ).
 
 remove_client(Pid) ->
+    logger:info("Removing client ~p", [Pid]),
     gen_server:cast(?MODULE, {remove_client, Pid}).
 
 broadcast_message(FromPid, Message) ->
@@ -59,7 +60,7 @@ handle_call(_Request, _From, State) ->
     {reply, ok, State}.
 
 handle_cast({add_client, Pid, Username}, State) ->
-    io:format("Storing client ~p with username: ~p~n", [Pid, Username]),
+    logger:info("Storing client ~p with username: ~p", [Pid, Username]),
     {noreply, State#state{clients = maps:put(Pid, Username, State#state.clients)}};
 
 handle_cast({remove_client, Pid}, State) ->
@@ -67,13 +68,13 @@ handle_cast({remove_client, Pid}, State) ->
 
 handle_cast({broadcast, FromPid, Message}, State) ->
     Username = maps:get(FromPid, State#state.clients, <<"Anonymous">>),
-    io:format("Broadcasting message from ~p (~p): ~p~n", [Username, FromPid, Message]),
+    logger:info("Broadcasting message from ~p (~p): ~p", [Username, FromPid, Message]),
     ok = windsurf_demo_db:store_message(Username, Message),
     Payload = jsone:encode(#{
         username => Username,
         message => Message
     }),
-    io:format("Encoded payload: ~p~n", [Payload]),
+    logger:info("Encoded payload: ~p", [Payload]),
     maps:foreach(
         fun(ClientPid, _) ->
             ClientPid ! {chat_message, FromPid, Payload}
