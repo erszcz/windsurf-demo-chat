@@ -1,11 +1,31 @@
 -module(windsurf_demo_db).
 
--export([init/0, connect/0, store_message/2, get_recent_messages/1]).
+-export([init/0, store_message/2, get_recent_messages/1]).
 
 -define(MAX_RECENT_MESSAGES, 50).
+-define(POOL_NAME, windsurf_db_pool).
+-define(POOL_SIZE, 5).
+-define(POOL_OVERFLOW, 2).
 
 init() ->
-    {ok, Conn} = connect(),
+    % Start the worker pool
+    PoolConfig = [
+        {worker, {windsurf_demo_db_worker, [
+            {host, application:get_env(windsurf_demo, db_host, "localhost")},
+            {port, application:get_env(windsurf_demo, db_port, 5432)},
+            {database, application:get_env(windsurf_demo, db_name, "windsurf_chat")},
+            {username, application:get_env(windsurf_demo, db_user, "windsurf")},
+            {password, application:get_env(windsurf_demo, db_password, "windsurf")}
+        ]}},
+        {size, ?POOL_SIZE},
+        {max_overflow, ?POOL_OVERFLOW},
+        {pool_sup_intensity, 5},
+        {pool_sup_period, 1},
+        {worker_module, windsurf_demo_db_worker}
+    ],
+    {ok, _} = wpool:start_pool(?POOL_NAME, PoolConfig),
+
+    % Initialize database schema
     CreateTable = "CREATE TABLE IF NOT EXISTS messages (
         id SERIAL PRIMARY KEY,
         username VARCHAR(255) NOT NULL,
@@ -13,35 +33,25 @@ init() ->
         timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     )",
     CreateIndex = "CREATE INDEX IF NOT EXISTS messages_timestamp_idx ON messages (timestamp DESC)",
-    {ok, [], []} = epgsql:squery(Conn, CreateTable),
-    {ok, [], []} = epgsql:squery(Conn, CreateIndex),
-    ok = epgsql:close(Conn).
 
-connect() ->
-    Host = application:get_env(windsurf_demo, db_host, "localhost"),
-    Port = application:get_env(windsurf_demo, db_port, 5432),
-    DB = application:get_env(windsurf_demo, db_name, "windsurf_chat"),
-    User = application:get_env(windsurf_demo, db_user, "windsurf"),
-    Password = application:get_env(windsurf_demo, db_password, "windsurf"),
-    epgsql:connect(#{
-        host => Host,
-        port => Port,
-        database => DB,
-        username => User,
-        password => Password
-    }).
+    ok = wpool:call(?POOL_NAME, {squery, CreateTable}, best_worker),
+    ok = wpool:call(?POOL_NAME, {squery, CreateIndex}, best_worker),
+    ok.
 
 store_message(Username, Message) ->
-    {ok, Conn} = connect(),
     Query = "INSERT INTO messages (username, message) VALUES ($1, $2)",
-    {ok, 1} = epgsql:equery(Conn, Query, [Username, Message]),
-    ok = epgsql:close(Conn).
+    case wpool:call(?POOL_NAME, {equery, Query, [Username, Message]}, best_worker) of
+        {ok, 1} -> ok;
+        Error -> Error
+    end.
 
 get_recent_messages(Limit) when is_integer(Limit), Limit > 0 ->
-    {ok, Conn} = connect(),
     Query = "SELECT username, message, timestamp FROM messages 
              ORDER BY timestamp DESC 
              LIMIT $1",
-    {ok, _Columns, Rows} = epgsql:equery(Conn, Query, [min(Limit, ?MAX_RECENT_MESSAGES)]),
-    ok = epgsql:close(Conn),
-    lists:reverse([{Username, Message, Timestamp} || {Username, Message, Timestamp} <- Rows]).
+    case wpool:call(?POOL_NAME, {equery, Query, [min(Limit, ?MAX_RECENT_MESSAGES)]}, best_worker) of
+        {ok, _Columns, Rows} ->
+            lists:reverse([{Username, Message, Timestamp} || {Username, Message, Timestamp} <- Rows]);
+        Error ->
+            Error
+    end.
