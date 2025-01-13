@@ -1,0 +1,76 @@
+-module(windsurf_demo_chat_server).
+-behaviour(gen_server).
+
+%% API
+-export([start_link/0,
+         add_client/2,
+         remove_client/1,
+         broadcast_message/2]).
+
+%% gen_server callbacks
+-export([init/1,
+         handle_call/3,
+         handle_cast/2,
+         handle_info/2,
+         terminate/2,
+         code_change/3]).
+
+-record(state, {
+    clients = #{} :: map()  % Map of Pid -> Username
+}).
+
+%% API
+start_link() ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+add_client(Pid, Username) ->
+    io:format("Adding client ~p with username: ~p~n", [Pid, Username]),
+    gen_server:cast(?MODULE, {add_client, Pid, Username}).
+
+remove_client(Pid) ->
+    gen_server:cast(?MODULE, {remove_client, Pid}).
+
+broadcast_message(FromPid, Message) ->
+    gen_server:cast(?MODULE, {broadcast, FromPid, Message}).
+
+%% gen_server callbacks
+init([]) ->
+    {ok, #state{}}.
+
+handle_call(_Request, _From, State) ->
+    {reply, ok, State}.
+
+handle_cast({add_client, Pid, Username}, State) ->
+    io:format("Storing client ~p with username: ~p~n", [Pid, Username]),
+    {noreply, State#state{clients = maps:put(Pid, Username, State#state.clients)}};
+
+handle_cast({remove_client, Pid}, State) ->
+    {noreply, State#state{clients = maps:remove(Pid, State#state.clients)}};
+
+handle_cast({broadcast, FromPid, Message}, State) ->
+    Username = maps:get(FromPid, State#state.clients, <<"Anonymous">>),
+    io:format("Broadcasting message from ~p (~p): ~p~n", [Username, FromPid, Message]),
+    Payload = jsone:encode(#{
+        username => Username,
+        message => Message
+    }),
+    io:format("Encoded payload: ~p~n", [Payload]),
+    maps:foreach(
+        fun(ClientPid, _) ->
+            ClientPid ! {chat_message, FromPid, Payload}
+        end,
+        State#state.clients
+    ),
+    {noreply, State};
+
+handle_cast(_Msg, State) ->
+    {noreply, State}.
+
+handle_info(_Info, State) ->
+    {noreply, State}.
+
+terminate(_Reason, _State) ->
+    ok.
+
+code_change(_OldVsn, State, _Extra) ->
+    {ok, State}.
