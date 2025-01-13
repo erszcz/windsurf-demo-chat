@@ -5,7 +5,8 @@
 -export([start_link/0,
          add_client/2,
          remove_client/1,
-         broadcast_message/2]).
+         broadcast_message/2,
+         get_recent_messages/0]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -14,6 +15,8 @@
          handle_info/2,
          terminate/2,
          code_change/3]).
+
+-define(RECENT_MESSAGES_LIMIT, 50).
 
 -record(state, {
     clients = #{} :: map()  % Map of Pid -> Username
@@ -25,13 +28,28 @@ start_link() ->
 
 add_client(Pid, Username) ->
     io:format("Adding client ~p with username: ~p~n", [Pid, Username]),
-    gen_server:cast(?MODULE, {add_client, Pid, Username}).
+    gen_server:cast(?MODULE, {add_client, Pid, Username}),
+    % Send recent messages to the new client
+    Recent = get_recent_messages(),
+    lists:foreach(
+        fun({MsgUsername, Message, _Timestamp}) ->
+            Payload = jsone:encode(#{
+                username => MsgUsername,
+                message => Message
+            }),
+            Pid ! {chat_message, self(), Payload}
+        end,
+        Recent
+    ).
 
 remove_client(Pid) ->
     gen_server:cast(?MODULE, {remove_client, Pid}).
 
 broadcast_message(FromPid, Message) ->
     gen_server:cast(?MODULE, {broadcast, FromPid, Message}).
+
+get_recent_messages() ->
+    windsurf_demo_db:get_recent_messages(?RECENT_MESSAGES_LIMIT).
 
 %% gen_server callbacks
 init([]) ->
@@ -50,6 +68,7 @@ handle_cast({remove_client, Pid}, State) ->
 handle_cast({broadcast, FromPid, Message}, State) ->
     Username = maps:get(FromPid, State#state.clients, <<"Anonymous">>),
     io:format("Broadcasting message from ~p (~p): ~p~n", [Username, FromPid, Message]),
+    ok = windsurf_demo_db:store_message(Username, Message),
     Payload = jsone:encode(#{
         username => Username,
         message => Message

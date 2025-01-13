@@ -1,5 +1,5 @@
 {application, windsurf_demo, [
-    {description, "Windsurf Demo Application"},
+    {description, "Windsurf Demo Chat Application"},
     {vsn, "0.1.0"},
     {registered, []},
     {mod, {windsurf_demo_app, []}},
@@ -7,7 +7,8 @@
         kernel,
         stdlib,
         cowboy,
-        jsone
+        jsone,
+        epgsql
     ]},
     {env, []},
     {modules, []},
