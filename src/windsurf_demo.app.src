@@ -1,17 +1,18 @@
-{application, windsurf_demo, [
-    {description, "Windsurf Demo Chat Application"},
-    {vsn, "0.1.0"},
-    {registered, []},
-    {mod, {windsurf_demo_app, []}},
-    {applications, [
-        kernel,
-        stdlib,
-        cowboy,
-        jsone,
-        epgsql
-    ]},
-    {env, []},
-    {modules, []},
-    {licenses, ["Apache-2.0"]},
-    {links, []}
-]}.
+{application, windsurf_demo,
+ [{description, "Windsurf Demo Chat Application"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {mod, {windsurf_demo_app, []}},
+  {applications,
+   [kernel,
+    stdlib,
+    cowboy,
+    jsone,
+    epgsql,
+    worker_pool
+   ]},
+  {env,[]},
+  {modules, []},
+  {licenses, ["Apache-2.0"]},
+  {links, []}
+ ]}.

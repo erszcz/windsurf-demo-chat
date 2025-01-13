@@ -39,8 +39,7 @@ add_client(Pid, Username) ->
             }),
             Pid ! {chat_message, self(), Payload}
         end,
-        Recent
-    ).
+        Recent).
 
 remove_client(Pid) ->
     gen_server:cast(?MODULE, {remove_client, Pid}).
@@ -49,7 +48,10 @@ broadcast_message(FromPid, Message) ->
     gen_server:cast(?MODULE, {broadcast, FromPid, Message}).
 
 get_recent_messages() ->
-    windsurf_demo_db:get_recent_messages(?RECENT_MESSAGES_LIMIT).
+    case windsurf_demo_db:get_recent_messages(?RECENT_MESSAGES_LIMIT) of
+        ok -> [];
+        Messages when is_list(Messages) -> Messages
+    end.
 
 %% gen_server callbacks
 init([]) ->
