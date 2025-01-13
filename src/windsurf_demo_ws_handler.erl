@@ -31,8 +31,19 @@ websocket_init(State = #{username := Username}) ->
     {ok, State}.
 
 websocket_handle({text, Msg}, State) ->
-    windsurf_demo_chat_server:broadcast_message(self(), Msg),
-    {ok, State};
+    case jsone:decode(Msg) of
+        {ok, #{action := "join", channel := Channel}} ->
+            windsurf_demo_chat_server:join_channel(Channel, self()),
+            {ok, State};
+        {ok, #{action := "leave", channel := Channel}} ->
+            windsurf_demo_chat_server:leave_channel(self()),
+            {ok, State};
+        {ok, #{action := "message", content := Content}} ->
+            windsurf_demo_chat_server:broadcast_message(self(), Content),
+            {ok, State};
+        _ ->
+            {ok, State}
+    end;
 websocket_handle(_Data, State) ->
     {ok, State}.
 

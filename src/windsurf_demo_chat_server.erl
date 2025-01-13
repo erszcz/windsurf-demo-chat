@@ -7,7 +7,9 @@
     add_client/2,
     remove_client/1,
     broadcast_message/2,
-    get_recent_messages/0
+    get_recent_messages/0,
+    join_channel/2,
+    leave_channel/1
 ]).
 
 %% gen_server callbacks
@@ -24,7 +26,9 @@
 
 -record(state, {
     % Map of Pid -> Username
-    clients = #{} :: map()
+    clients = #{} :: map(),
+    % Map of ChannelName -> List of Pids
+    channels = #{} :: map()
 }).
 
 %% API
@@ -57,10 +61,25 @@ broadcast_message(FromPid, Message) ->
 get_recent_messages() ->
     windsurf_demo_db:get_recent_messages(?RECENT_MESSAGES_LIMIT).
 
+join_channel(Channel, Pid) ->
+    %% Add the client to the channel
+    State = gen_server:call(?MODULE, {join_channel, Channel, Pid}),
+    logger:info("Client ~p joined channel ~s", [Pid, Channel]),
+    {ok, State}.
+
+leave_channel(Pid) ->
+    %% Remove the client from all channels
+    gen_server:cast(?MODULE, {leave_channel, Pid}).
+
 %% gen_server callbacks
 init([]) ->
     {ok, #state{}}.
 
+handle_call({join_channel, Channel, Pid}, _From, State) ->
+    Channels = maps:update_with(
+        Channel, fun(Pids) -> [Pid | Pids] end, [Pid], State#state.channels
+    ),
+    {reply, ok, State#state{channels = Channels}};
 handle_call(_Request, _From, State) ->
     {reply, ok, State}.
 
@@ -85,6 +104,9 @@ handle_cast({broadcast, FromPid, Message}, State) ->
         State#state.clients
     ),
     {noreply, State};
+handle_cast({leave_channel, Pid}, State) ->
+    Channels = maps:map(fun(_Channel, Pids) -> lists:delete(Pid, Pids) end, State#state.channels),
+    {noreply, State#state{channels = Channels}};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
