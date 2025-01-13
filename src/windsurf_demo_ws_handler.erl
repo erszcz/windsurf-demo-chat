@@ -41,7 +41,11 @@ websocket_handle({text, Msg}, State) ->
         {ok, #{action := "message", content := Content}} ->
             windsurf_demo_chat_server:broadcast_message(self(), Content),
             {ok, State};
+        {error, Reason} ->
+            logger:error("Failed to decode message: ~p", [Reason]),
+            {ok, State};
         _ ->
+            logger:error("Invalid message format: ~p", [Msg]),
             {ok, State}
     end;
 websocket_handle(_Data, State) ->
